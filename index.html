@@ -151,12 +151,13 @@
 			needs: "restaurant",
 			actions: {
 				addItem: function(params) {
-					var newItem = this.store.createRecord('item', {
-						id: this.get('itemName')
-					});
-					newItem.save().then(function() {
-						console.log(newItem);
-					});
+					// // TODO: I haven't figured out how to get adding items to work yet with relationships
+					// var newItem = this.store.createRecord('item', {
+					// 	id: this.get('itemName')
+					// });
+					// newItem.save().then(function() {
+					// 	console.log(newItem);
+					// });
 					// console.log(this.get('controllers.restaurant.model.id'));
 				}
 			}
