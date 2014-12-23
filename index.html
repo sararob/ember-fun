@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+	<script src="js/handlebars-v2.0.0.js"></script>
+	<script src="http://builds.emberjs.com/tags/v1.9.0/ember.js"></script>
+	<script src="http://builds.emberjs.com/tags/v1.0.0-beta.12/ember-data.js"></script>
+
+	<!-- Firebase -->
+	<script src="https://cdn.firebase.com/js/client/2.0.5/firebase.js"></script>
+
+	<!-- EmberFire -->
+	<script src="js/emberfire.js"></script>
+</head>
+<body>
+	<script type="text/x-handlebars" data-template-name="restaurants/index">
+		{{#each restaurant in model}}
+			<div><strong>{{#link-to 'restaurant' restaurant}}{{restaurant.id}}{{/link-to}}</strong><em> {{restaurant.city.id}}</em></div>
+			<a href="#" {{action "delete" restaurant}}>Delete</a>
+		{{/each}}
+		<br/><br/>
+		<div>{{#link-to 'restaurants.new'}}Add a new restaurant{{/link-to}}</div>
+		{{outlet}}
+	</script>
+
+	<script type="text/x-handlebars" data-template-name="restaurants/new">
+		{{input type="text" placeholder="Name" value=restName}}
+		{{input type="text" placeholder="City" value=restCity}}
+		<button {{action 'addRestaurant'}}>Add</button>
+	</script>
+
+	<script type="text/x-handlebars" data-template-name="restaurant/index">
+		{{#each restaurant in model}}
+			<strong>{{restaurant.id}}</strong> <em>{{restaurant.city.id}}</em>
+		{{/each}}
+		<br/><br/>
+		<div>{{#link-to 'items.new' }}Add an item{{/link-to}}</div>
+		{{outlet}}
+	</script>
+
+	<script type="text/x-handlebars" data-template-name="items/new">
+		{{input type="text" placeholder="Name" value=itemName}}
+		<button {{action 'addItem'}}>Add</button>
+	</script>
+
+	<script>
+		window.App = Ember.Application.create();
+
+		var Promise = Ember.RSVP.Promise;
+
+		App.ApplicationAdapter = DS.FirebaseAdapter.extend({
+			firebase: new Firebase("https://ember-queries.firebaseio.com/")
+		});
+
+		//Models
+		App.Item = DS.Model.extend({
+			restaurant: DS.belongsTo('restaurant'),
+			reviews: DS.hasMany('review')
+		});
+
+		App.Restaurant = DS.Model.extend({
+			city: DS.belongsTo('city', {async: true}),
+			items: DS.hasMany('item', {async: true})
+		});
+
+		App.City = DS.Model.extend({
+			restaurants: DS.hasMany('restaurant', {async: true})
+		});
+
+		App.Review = DS.Model.extend({
+			rating: DS.attr('number'),
+			content: DS.attr('string'),
+			item: DS.belongsTo('item')
+		});
+
+		//Router
+		App.Router.map(function() {
+			this.resource('restaurants', { path: '/restaurants' }, function() {
+				this.resource('restaurant', { path: '/:restaurant_id' }, function() {
+					this.resource('items', function() {
+						this.route('new');
+					});
+				});
+				this.route('new');
+			});
+		});
+
+		//Routes
+		App.RestaurantsRoute = Ember.Route.extend({
+			model: function() {
+				return this.store.find('restaurant');
+			}
+		});
+
+		App.IndexRoute = Ember.Route.extend({
+			redirect: function() {
+				this.transitionTo('restaurants');
+			}
+		});
+
+		App.RestaurantRoute = Ember.Route.extend({
+			model: function(params) {
+				return this.store.find('restaurant', params.restaurant_id);
+			}
+		});
+
+		App.RestaurantIndexRoute = Ember.Route.extend({
+			model: function(params) {
+				return this.store.find('restaurant');
+			}
+		});
+
+		App.ItemsNewRoute = Ember.Route.extend({
+			model: function(params) {
+				return this.store.find('item');
+			}
+		});
+
+		//Controllers
+		App.RestaurantsNewController = Ember.ObjectController.extend({
+			actions: {
+				addRestaurant: function() {
+					// this.store.unloadAll('city'); //hack to save more than one with the same ID
+					var newRestaurant = this.store.createRecord('restaurant', {
+						id: this.get('restName')
+					});
+					var newCity = this.store.createRecord('city', {
+						id: this.get('restCity')
+					});
+					newCity.save();
+					newRestaurant.save().then(function(restaurant) {
+						console.log('saved');
+					}, function(a) {
+						console.log('fail');
+					});
+					newRestaurant.set('city', newCity);
+					this.transitionToRoute('restaurant', newRestaurant.id);
+				}
+			}
+		});
+
+		App.RestaurantsIndexController = Ember.ObjectController.extend({
+			actions: {
+				delete: function(restaurant) {
+					restaurant.destroyRecord();
+				}
+			}
+		});
+
+		App.ItemsNewController = Ember.ObjectController.extend({
+			needs: "restaurant",
+			actions: {
+				addItem: function(params) {
+					var newItem = this.store.createRecord('item', {
+						id: this.get('itemName')
+					});
+					newItem.save().then(function() {
+						console.log(newItem);
+					});
+					// console.log(this.get('controllers.restaurant.model.id'));
+				}
+			}
+		});
+	</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+How do relationships work?
+- If you have an embedded relationship, how do you set up models / templates / controllers to save the relationship correctly?
+- Saving a record via promises?
+
+
+What does this.get('model') do?
